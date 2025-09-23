@@ -1,13 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, TouchableOpacity, TextInput, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { Audio } from 'expo-av';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
+import { languages } from './languages';
 
 const genAI = new GoogleGenerativeAI(process.env.EXPO_PUBLIC_GEMINI_API_KEY || 'YOUR_API_KEY');
+
+interface TranslationHistoryItem {
+  id: string;
+  transcribedText: string;
+  translatedText: string;
+  culturalTips: string[];
+  sourceLang: string;
+  targetLang: string;
+  timestamp: number;
+}
 
 const blobToBase64 = (blob: Blob): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -29,6 +43,48 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [sourceLang, setSourceLang] = useState('en');
   const [targetLang, setTargetLang] = useState('es');
+  const [isOffline, setIsOffline] = useState(false);
+  const [history, setHistory] = useState<TranslationHistoryItem[]>([]);
+  const [view, setView] = useState<'main' | 'history'>('main');
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      setIsOffline(!state.isConnected);
+    });
+
+    loadHistory();
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  async function loadHistory() {
+    try {
+      const jsonValue = await AsyncStorage.getItem('@translation_history');
+      if (jsonValue !== null) {
+        setHistory(JSON.parse(jsonValue));
+      }
+    } catch (e) {
+      console.error('Failed to load history.', e);
+    }
+  }
+
+  async function saveTranslation(item: Omit<TranslationHistoryItem, 'id' | 'timestamp'>) {
+    try {
+      const newHistoryItem: TranslationHistoryItem = {
+        ...item,
+        id: Date.now().toString(),
+        timestamp: Date.now(),
+      };
+      const newHistory = [newHistoryItem, ...history];
+      setHistory(newHistory);
+      const jsonValue = JSON.stringify(newHistory);
+      await AsyncStorage.setItem('@translation_history', jsonValue);
+    } catch (e) {
+      console.error('Failed to save translation.', e);
+    }
+  }
 
   async function startRecording() {
     try {
@@ -98,6 +154,15 @@ export default function App() {
       const tipsResult = await model.generateContent(tipsPrompt);
       const tips = tipsResult.response.text().trim().split('\n').filter(tip => tip.length > 0);
       setCulturalTips(tips);
+
+      // Save to history
+      await saveTranslation({
+        transcribedText: text,
+        translatedText: translated,
+        culturalTips: tips,
+        sourceLang,
+        targetLang,
+      });
 
     } catch (err) {
       console.error('Processing error', err);
