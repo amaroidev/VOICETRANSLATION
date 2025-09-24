@@ -68,18 +68,22 @@ export default function App() {
   // PWA-specific initialization
   useEffect(() => {
     // Handle PWA URL parameters for shortcuts
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const mode = urlParams.get('mode');
-      
-      if (mode === 'voice') {
-        setInputMode('voice');
-        setView('main');
-      } else if (mode === 'ocr') {
-        setInputMode('ocr');
-        setView('main');
-      } else if (mode === 'conversation') {
-        setView('conversation');
+    if (typeof window !== 'undefined' && window.location && window.location.search) {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const mode = urlParams.get('mode');
+        
+        if (mode === 'voice') {
+          setInputMode('voice');
+          setView('main');
+        } else if (mode === 'ocr') {
+          setInputMode('ocr');
+          setView('main');
+        } else if (mode === 'conversation') {
+          setView('conversation');
+        }
+      } catch (error) {
+        console.log('PWA URL parameter handling skipped:', error);
       }
     }
   }, []);
@@ -184,13 +188,13 @@ export default function App() {
       // Translate
       const translatePrompt = `Translate this text from ${sourceLang} to ${targetLang}: ${text}`;
       const translateResult = await model.generateContent(translatePrompt);
-      const translated = translateResult.response.text().trim();
+      const translated = translateResult.response.text().trim().replace(/\*+/g, '');
       setTranslatedText(translated);
 
       // Cultural tips
       const tipsPrompt = `Provide 3-5 concise cultural nuance tips for speaking ${targetLang} in a conversation, considering the context of the translated text: "${translated}". Format as a numbered list.`;
       const tipsResult = await model.generateContent(tipsPrompt);
-      const tips = tipsResult.response.text().trim().split('\n').filter(tip => tip.length > 0);
+      const tips = tipsResult.response.text().trim().replace(/\*+/g, '').split('\n').filter(tip => tip.length > 0);
       setCulturalTips(tips);
 
       // Save to history
@@ -226,16 +230,118 @@ export default function App() {
     setModalVisible(false);
   };
 
-  const speak = (text: string, language: string) => {
-    // Stop any previous speech first
-    Speech.stop();
-    
-    Speech.speak(text, { 
-      language,
-      rate: 0.75,       // Optimal rate for clarity and volume
-      pitch: 1.1,       // Slightly higher pitch for better audibility  
-      volume: 1.0,      // Maximum volume
-    });
+  const speak = async (text: string, language: string) => {
+    try {
+      // Stop any previous speech first
+      Speech.stop();
+      
+      // For web platform, try using Web Speech API directly for better language support
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        // Use Web Speech API on web
+        const synth = window.speechSynthesis;
+        synth.cancel(); // Stop any ongoing speech
+        
+        const languageMap: { [key: string]: string } = {
+          'en': 'en-US',
+          'es': 'es-ES',
+          'fr': 'fr-FR',
+          'de': 'de-DE',
+          'it': 'it-IT',
+          'pt': 'pt-BR',
+          'nl': 'nl-NL',
+          'ru': 'ru-RU',
+          'ja': 'ja-JP',
+          'zh-CN': 'zh-CN',
+          'zh-TW': 'zh-TW',
+          'ko': 'ko-KR',
+          'ar': 'ar-SA',
+          'hi': 'hi-IN',
+          'bn': 'bn-BD',
+          'ak': 'en-US',
+          'gaa': 'en-US',
+        };
+        
+        const speechLang = languageMap[language] || language;
+        const utterance = new SpeechSynthesisUtterance(text);
+        
+        // Get available voices and find the best match
+        const voices = synth.getVoices();
+        console.log('Available web voices:', voices.map(v => `${v.lang} - ${v.name}`));
+        
+        // Try to find a voice that matches the target language
+        let selectedVoice = voices.find(voice => 
+          voice.lang.toLowerCase().startsWith(speechLang.toLowerCase()) ||
+          voice.lang.toLowerCase().startsWith(language.toLowerCase())
+        );
+        
+        // If no exact match, try broader match
+        if (!selectedVoice && language === 'es') {
+          selectedVoice = voices.find(voice => voice.lang.toLowerCase().startsWith('es'));
+        }
+        
+        if (selectedVoice) {
+          utterance.voice = selectedVoice;
+          console.log(`Using web voice: ${selectedVoice.name} (${selectedVoice.lang}) for language: ${language}`);
+        } else {
+          console.log(`No specific voice found for ${language}, using default`);
+        }
+        
+        utterance.lang = speechLang;
+        utterance.rate = 0.75;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+        
+        synth.speak(utterance);
+        return;
+      }
+      
+      // Fallback to Expo Speech for mobile
+      const speechLanguageMap: { [key: string]: string[] } = {
+        'en': ['en-US', 'en-GB', 'en-AU'],
+        'es': ['es-ES', 'es-MX', 'es-US', 'es-AR'],
+        'fr': ['fr-FR', 'fr-CA'],
+        'de': ['de-DE', 'de-AT'],
+        'it': ['it-IT'],
+        'pt': ['pt-BR', 'pt-PT'],
+        'nl': ['nl-NL', 'nl-BE'],
+        'ru': ['ru-RU'],
+        'ja': ['ja-JP'],
+        'zh-CN': ['zh-CN', 'zh'],
+        'zh-TW': ['zh-TW', 'zh-HK'],
+        'ko': ['ko-KR'],
+        'ar': ['ar-SA', 'ar-AE'],
+        'hi': ['hi-IN'],
+        'bn': ['bn-BD', 'bn-IN'],
+        'ak': ['en-US'],
+        'gaa': ['en-US'],
+      };
+      
+      const availableVoices = await Speech.getAvailableVoicesAsync();
+      const possibleLanguages = speechLanguageMap[language] || [language];
+      let selectedLanguage = possibleLanguages[0];
+      
+      for (const lang of possibleLanguages) {
+        const matchingVoice = availableVoices.find(voice => 
+          voice.language.toLowerCase() === lang.toLowerCase()
+        );
+        if (matchingVoice) {
+          selectedLanguage = lang;
+          break;
+        }
+      }
+      
+      console.log(`Using Expo Speech: "${text}" in language: ${selectedLanguage} (original: ${language})`);
+      
+      await Speech.speak(text, { 
+        language: selectedLanguage,
+        rate: 0.75,       
+        pitch: 1.0,
+        volume: 1.0,
+      });
+    } catch (error) {
+      console.error('Speech error:', error);
+      Alert.alert('Speech Error', 'Unable to speak text. Please try again.');
+    }
   };
 
   const onShare = async () => {
@@ -289,13 +395,13 @@ export default function App() {
       // Translate
       const translatePrompt = `Translate this text from ${detectedLang} to ${targetLang}: ${textToTranslate}`;
       const translateResult = await model.generateContent(translatePrompt);
-      const translated = translateResult.response.text().trim();
+      const translated = translateResult.response.text().trim().replace(/\*+/g, '');
       setTranslatedText(translated);
 
       // Cultural tips
       const tipsPrompt = `Provide 3-5 concise cultural nuance tips for speaking ${targetLang} in a conversation, considering the context of the translated text: "${translated}". Format as a numbered list.`;
       const tipsResult = await model.generateContent(tipsPrompt);
-      const tips = tipsResult.response.text().trim().split('\n').filter(tip => tip.length > 0);
+      const tips = tipsResult.response.text().trim().replace(/\*+/g, '').split('\n').filter(tip => tip.length > 0);
       setCulturalTips(tips);
 
       // Save to history
@@ -422,12 +528,12 @@ ${conversationContext}
 Generate a natural, helpful, and engaging response in ${toLang} language. Keep it conversational and relevant to what they said. Be friendly and helpful. Maximum 2 sentences.`;
 
       const responseResult = await model.generateContent(responsePrompt);
-      const aiResponse = responseResult.response.text().trim();
+      const aiResponse = responseResult.response.text().trim().replace(/\*+/g, '');
       
       // Translate AI response back to user's language
       const translateBackPrompt = `Translate this text from ${toLang} to ${fromLang}: ${aiResponse}`;
       const translateBackResult = await model.generateContent(translateBackPrompt);
-      const aiResponseTranslated = translateBackResult.response.text().trim();
+      const aiResponseTranslated = translateBackResult.response.text().trim().replace(/\*+/g, '');
 
       // Add AI response to conversation
       const aiConversationItem = {
@@ -441,8 +547,8 @@ Generate a natural, helpful, and engaging response in ${toLang} language. Keep i
       setConversationHistory(prev => [...prev, aiConversationItem]);
       
       // Speak the AI response in the target language
-      setTimeout(() => {
-        speak(aiResponse, toLang);
+      setTimeout(async () => {
+        await speak(aiResponse, toLang);
       }, 500);
 
     } catch (err) {
@@ -581,12 +687,12 @@ Generate a natural, helpful, and engaging response in ${toLang} language. Keep i
       // Translate text
       const translatePrompt = `Translate this text from ${detectedSourceLang} to ${targetLang}: "${text}"`;
       const translateResult = await model.generateContent(translatePrompt);
-      const translated = translateResult.response.text().trim();
+      const translated = translateResult.response.text().trim().replace(/\*+/g, '');
 
       // Get cultural tips
       const tipsPrompt = `Provide 2-3 brief cultural context tips for translating from ${detectedSourceLang} to ${targetLang}. Format as bullet points.`;
       const tipsResult = await model.generateContent(tipsPrompt);
-      const tips = tipsResult.response.text().trim().split('\n').filter(tip => tip.trim());
+      const tips = tipsResult.response.text().trim().replace(/\*+/g, '').split('\n').filter(tip => tip.trim());
 
       // Set results
       setTranscribedText(text);
