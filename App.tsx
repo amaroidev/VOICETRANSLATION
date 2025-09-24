@@ -132,7 +132,10 @@ export default function App() {
     try {
       const permission = await Audio.requestPermissionsAsync();
       if (permission.status !== 'granted') {
-        Alert.alert('Permission required', 'Microphone permission is needed to record audio.');
+        Alert.alert(
+          'Microphone Permission Required', 
+          'Please allow microphone access to use voice translation.'
+        );
         return;
       }
 
@@ -597,7 +600,10 @@ Generate a natural, helpful, and engaging response in ${toLang} language. Keep i
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission required', 'Camera permissions are needed to take photos.');
+        Alert.alert(
+          'Camera Permission Required', 
+          'Please allow camera access to take photos for translation.'
+        );
         return;
       }
 
