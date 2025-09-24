@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "VOICETRANSLATION",
-    "slug": "VOICETRANSLATION",
+    "name": "Voice Translation Companion",
+    "slug": "voice-translation-companion",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/voicetranslationicon.jpg",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -24,7 +24,24 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "static",
+      "build": {
+        "babel": {
+          "include": ["@expo/vector-icons"]
+        }
+      }
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "web": {
+            "bundler": "metro"
+          }
+        }
+      ]
+    ]
   }
 }

@@ -1,0 +1,115 @@
+{
+  "name": "Voice Translation Companion",
+  "short_name": "VoiceTranslator",
+  "description": "AI-powered multilingual translation app with voice, text, and OCR capabilities",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F2F2F7",
+  "theme_color": "#007AFF",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["productivity", "utilities", "education"],
+  "icons": [
+    {
+      "src": "/assets/voicetranslationicon.jpg",
+      "sizes": "72x72",
+      "type": "image/jpeg",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/assets/voicetranslationicon.jpg",
+      "sizes": "96x96",
+      "type": "image/jpeg",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/assets/voicetranslationicon.jpg",
+      "sizes": "128x128",
+      "type": "image/jpeg",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/assets/voicetranslationicon.jpg",
+      "sizes": "144x144",
+      "type": "image/jpeg",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/assets/voicetranslationicon.jpg",
+      "sizes": "152x152",
+      "type": "image/jpeg",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/assets/voicetranslationicon.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/assets/voicetranslationicon.jpg",
+      "sizes": "384x384",
+      "type": "image/jpeg",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/assets/voicetranslationicon.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "maskable any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Voice Translation",
+      "short_name": "Voice",
+      "description": "Quick voice translation",
+      "url": "/?mode=voice",
+      "icons": [
+        {
+          "src": "/icon-96.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "OCR Translation",
+      "short_name": "OCR",
+      "description": "Translate text from images",
+      "url": "/?mode=ocr",
+      "icons": [
+        {
+          "src": "/icon-96.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Conversation",
+      "short_name": "Chat",
+      "description": "AI-powered conversation mode",
+      "url": "/?mode=conversation",
+      "icons": [
+        {
+          "src": "/icon-96.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/screenshot-narrow.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ]
+}
